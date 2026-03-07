@@ -1,0 +1,93 @@
+local PhysicsModule = {}
+
+local ServerScriptService = game:GetService("ServerScriptService")
+local Debris = game:GetService("Debris")
+
+local Logger = require(ServerScriptService.Services.Logger)
+
+local function getRoot(model)
+	if not model then return nil end
+	return model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+end
+
+local function applyVelocity(root, direction, force, duration)
+	if not root then return end
+
+	local attachment = root:FindFirstChild("PhysicsAttachment")
+	if not attachment then
+		attachment = Instance.new("Attachment")
+		attachment.Name = "PhysicsAttachment"
+		attachment.Parent = root
+	end
+
+	local linearVelocity = Instance.new("LinearVelocity")
+	linearVelocity.Attachment0 = attachment
+	linearVelocity.VectorVelocity = direction * force
+	linearVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+	linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	linearVelocity.Parent = root
+
+	Debris:AddItem(linearVelocity, duration)
+end
+
+function PhysicsModule:Apply(config, attacker, target)
+	if not config then 
+		Logger:Warn("PhysicsModule", "Apply called with nil config") 
+		return
+	end
+
+	local force = config.Force or 50
+	local duration = config.Duration or 0.2
+
+	local attackerRoot = getRoot(attacker)
+	local targetRoot = getRoot(target)
+
+	if config.Type == "Knockback" then
+		if not attackerRoot or not targetRoot then 
+			Logger:Warn("PhysicsModule", "Knockback missing roots")
+			return
+		end
+
+		local delta = targetRoot.Position - attackerRoot.Position
+		if delta.Magnitude == 0 then return end
+
+		applyVelocity(targetRoot, delta.Unit, force, duration)
+
+	elseif config.Type == "Launch" then
+		if not targetRoot then
+			Logger:Warn("PhysicsModule", "Launch missing target root")
+			return
+		end
+
+		applyVelocity(targetRoot, Vector3.new(0, 1, 0), force, duration)
+
+	elseif config.Type == "Pull" then
+		if not attackerRoot or not targetRoot then 
+			Logger:Warn("PhysicsModule", "Pull missing roots")
+			return
+		end
+
+		local delta = attackerRoot.Position - targetRoot.Position
+		if delta.Magnitude == 0 then return end
+
+		applyVelocity(targetRoot, delta.Unit, force, duration)
+
+	elseif config.Type == "Dash" then
+		if not attackerRoot then 
+			Logger:Warn("PhysicsModule", "Dash missing attacker root")
+			return
+		end
+
+		local direction = attackerRoot.CFrame.LookVector
+
+		applyVelocity(attackerRoot, direction, force, duration)
+
+	else
+		Logger:Warn(
+			"PhysicsModule",
+			"Unknown physics type: " .. tostring(config.Type)
+		)
+	end
+end
+
+return PhysicsModule
