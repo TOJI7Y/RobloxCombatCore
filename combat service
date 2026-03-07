@@ -1,0 +1,306 @@
+local CombatService = {}
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local CombatStateManager = require(script.Parent.CombatStateManager)
+local PhysicsModule = require(script.Parent.PhysicsModule)
+local HitboxModule = require(script.Parent.HitboxModule)
+local CursedEnergyService = require(script.Parent.CursedEnergyService)
+local MoveRegistry = require(script.Parent.MoveRegistry)
+local PassiveService = require(script.Parent.PassiveService)
+local DomainService = require(script.Parent.DomainService)
+
+local Logger = require(ServerScriptService.Services.Logger)
+
+local StateSync = ReplicatedStorage.Remotes:WaitForChild("StateSync")
+
+local cooldown = {}
+
+local function getCooldown(player)
+	cooldown[player] = cooldown[player] or {}
+	return cooldown[player]
+end
+
+local HitLog = {}
+
+local function getRootPart(player)
+	local character = player.Character
+	if not character then return nil end
+	
+	return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid(player)
+	local character = player.Character
+	if not character then return nil end
+	
+	return character:FindFirstChildOfClass("Humanoid")
+end
+
+local CharacterService 
+
+local function getMoveData(player, moveName)
+	if not CharacterService then 
+		CharacterService = require(script.Parent.CharacterService)
+	end
+	
+	local characterKey = CharacterService:GetCharacter(player)
+	if not characterKey then
+		Logger:Warn("[CombatService] No character assigned", player)
+		return nil
+	end
+	
+	local characterMoves = MoveRegistry.Characters[characterKey]
+	if not characterMoves then
+		Logger:Warn("[CombatService] No MoveRegistry entry >> " .. characterKey, player)
+		return nil
+	end
+	
+	local move = characterMoves.Moves[moveName]
+	if not move then
+		Logger:Warn("[CombatService] Move not found >> " .. moveName, player)
+		return nil
+	end
+	
+	return move
+end
+
+local AbilityService
+local function getAbilityService()
+	if not AbilityService then
+		AbilityService = require(script.Parent.AbilityService)
+	end
+	return AbilityService
+end
+	
+function CombatService:CanUseMove(player, moveName)
+	
+	local move = getMoveData(player, moveName)
+	if not move then 
+		return false, "Invalid move"
+	end
+	
+	if CombatStateManager:HasState(player, "Stunned") then
+		Logger:Warn("[CombatService] Blocked: Stunned >> " .. moveName, player)
+		return false, "Stunned"
+	end
+	
+	if CombatStateManager:HasState(player, "Attacking") then
+		Logger:Warn("[CombatService] Blocked: Attacking >> " .. moveName, player)
+		return false, "Attacking"
+	end
+	
+	if CombatStateManager:HasState(player, "Recovery") then
+		Logger:Warn("[CombatService] Blocked: Recovery >> " .. moveName, player)
+		return false, "Recovery"
+	end
+	
+	local cooldowns = getCooldown(player)
+	if cooldowns[moveName] and os.clock() < cooldowns[moveName] then
+		Logger:Warn("[CombatService] Blocked: ONCooldown >> " .. moveName, player)
+		return false, "On Cooldown"
+	end
+	
+	local CeCost = move.CECost or 0
+	if CeCost > 0 and not CursedEnergyService:HasCE(player, CeCost) then
+		Logger:Warn("[CombatService] Blocked: Not Enough CE >> " .. moveName, player)
+		return false, "Not Enough Cursed Energy"
+	end
+	
+	local humanoid = getHumanoid(player)
+	if not humanoid or humanoid.Health <= 0 then
+		Logger:Warn("[CombatService] Blocked: Dead >> " .. moveName, player)
+		return false, "Dead"
+	end
+	
+	return true, "OK"
+end
+
+function CombatService:ApplyHit(attacker, victim, move, hitboxId)
+	
+	HitLog[hitboxId] = HitLog[hitboxId] or {}
+	if HitLog[hitboxId][victim] then
+		Logger:Warn("[CombatService] Double hit prevented >> " .. victim.Name, attacker)
+		return
+	end
+	HitLog[hitboxId][victim] = true
+	
+	local humanoid = getHumanoid(victim)
+	if not humanoid or humanoid.Health <= 0 then
+		Logger:Warn("[CombatService] Hit skipped: victim dead >> " .. victim.Name, attacker)
+		return
+	end
+	
+	if attacker == victim then return end
+	
+	local damage = move.Damage or 0
+	
+	if CharacterService then
+		local victimChar = CharacterService:GetCharacter(victim)
+		if victimChar == "Gojo" then
+			local blocked = CursedEnergyService:DrainInfinityBlock(victim)
+			if blocked then
+				Logger:Info("[CombatService] Infinity blocked >> " .. victim.Name, attacker)
+				StateSync:FireClient(attacker, { Type = "HitBlocked", Victim = victim.Name })
+				return
+			end
+		end
+	end
+	
+	damage = getAbilityService():ProcessHit(attacker, victim, move, damage)
+	damage = PassiveService:OnAttackerHit(attacker, victim, damage, move)
+
+	humanoid:TakeDamage(damage) 
+	Logger:Info("[CombatService] Hit >> " .. attacker.Name .. " hit " .. victim.Name .. " for " .. damage, attacker)
+
+	PassiveService:OnVictimHit(victim, attacker, damage) 
+	
+	if move.StunDuration and move.StunDuration > 0 then
+		CombatStateManager:AddState(victim, "Stunned", move.StunDuration)
+		Logger:Info("[CombatService] Stun >> " .. victim.Name .. " for " .. move.StunDuration .. "s", attacker)
+	end
+	
+	if move.Knockback and move.Knockback > 0 then
+		PhysicsModule:Apply({
+			Type     = "Knockback",
+			Force    = move.Knockback,
+			Duration = move.KnockbackDuration or 0.2,
+		}, attacker.Character, victim.Character)
+	end
+	
+	StateSync:FireAllClients({
+		Type     = "HitConfirm",
+		Attacker = attacker.Name,
+		Victim   = victim.Name,
+		Damage   = damage,
+	})
+end
+
+function CombatService:UseMove(player, moveName)
+	
+	local allowed, reason = self:CanUseMove(player, moveName)
+	if not allowed then
+		Logger:Warn("[CombatService] UseMove denied >> " .. moveName .. " | " .. reason, player)
+		StateSync:FireClient(player, {
+			Type   = "MoveDenied",
+			Move   = moveName,
+			Reason = reason,
+		})
+		return
+	end
+	
+	local move = getMoveData(player, moveName)
+	
+	if move.IsDomain then
+		DomainService:Activate(player, move, moveName)
+		return
+	end
+	
+	local CeCost = move.CECost or 0
+	if CeCost > 0 then
+		local drained = CursedEnergyService:DrainCE(player, CeCost)
+		if not drained then
+			Logger:Error("[CombatService] CE drain failed mid-execution >> " .. moveName, player)
+			StateSync:FireClient(player, {
+				Type   = "MoveDenied",
+				Move   = moveName,
+				Reason = "NotEnoughCE",
+			})
+			return
+		end
+	end
+	StateSync:FireClient(player, {
+		Type        = "PlayAnimation",
+		AnimationId = move.AnimationId,
+		Move        = moveName,
+	})
+	
+	local attackDuration = (move.StartupTime or 0) + (move.ActiveTime or 0)
+	CombatStateManager:AddState(player, "Attacking", attackDuration)
+	
+	Logger:Info("[CombatService] Executing >> " .. moveName, player)
+	
+	task.spawn(function()
+		
+		if move.StartupTime and move.StartupTime > 0 then
+			task.wait(move.StartupTime)
+		end 
+		
+		if not player.Parent then 
+			Logger:Warn("[CombatService] Player left during startup >> " .. moveName, player)
+			return
+		end
+		
+		local humanoid = getHumanoid(player)
+		if not humanoid or humanoid.Health <= 0 then
+			Logger:Warn("[CombatService] Player died during startup >> " .. moveName, player)
+			return
+		end
+		
+		local hitboxId = player.UserId .. "_" .. moveName .. "_" .. os.clock()
+		HitLog[hitboxId] = {}
+
+		local isBuff, move = getAbilityService():ProcessMove(player, move, hitboxId, function(p, v, m, id)
+			self:ApplyHit(p, v, m, id)
+		end)
+		if isBuff then return end
+		
+		local rootPart = getRootPart(player)
+		if not rootPart then
+			Logger:Warn("[CombatService] No rootPart >> " .. moveName, player)
+			return
+		end
+		
+		local victims = HitboxModule:CreateHitbox(player, move.Hitbox)
+		
+		local victimCount = 0
+		for _ in pairs(victims) do victimCount += 1 end
+		Logger:Info("[CombatService] Hitbox fired >> " .. moveName .. " | " .. victimCount .. " victims", player)
+
+		for victimModel, _ in pairs(victims) do
+			local victimPlayer = Players:GetPlayerFromCharacter(victimModel)
+			if victimPlayer then
+				self:ApplyHit(player, victimPlayer, move, hitboxId)
+			else
+				local humanoid = victimModel:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.Health > 0 then
+					humanoid:TakeDamage(move.Damage or 0)
+					Logger:Info("[CombatService] NPC hit >> " .. victimModel.Name .. " for " .. (move.Damage or 0), player)
+				end
+			end
+		end
+
+        if move.ActiveTime and move.ActiveTime > 0 then
+			task.wait(move.ActiveTime)
+		end
+		
+		if move.RecoveryTime and move.RecoveryTime > 0 then
+			
+			CombatStateManager:AddState(player, "Recovery", move.RecoveryTime)
+			Logger:Info("[CombatService] Recovery >> " .. move.RecoveryTime .. "s", player)
+			
+		end
+		
+		local cooldown = getCooldown(player)
+		cooldown[moveName] = os.clock() + (move.Cooldown or 0)
+		
+		StateSync:FireClient(player, {
+			Type     = "CooldownStart",
+			Move     = moveName,
+			Duration = move.Cooldown or 0,
+		})
+		
+		Logger:Info("[CombatService] Cooldown >> " .. moveName .. " for " .. (move.Cooldown or 0) .. "s", player)
+
+		HitLog[hitboxId] = nil
+	end)
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	cooldown[player] = nil
+	Logger:Info("[CombatService] Cleaned up player data", player)
+end)
+
+return CombatService
