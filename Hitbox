@@ -1,0 +1,121 @@
+local HitboxModule = {}
+
+local function GetCharacterModel(attacker)
+	if not attacker then return nil end
+	
+	if attacker:IsA("Player") then
+		return attacker.Character
+	end
+	
+	if attacker:IsA("Model") then
+		return attacker
+	end
+	
+	return nil 
+end
+
+local function BoxHit(character, root, config)
+	
+    if not config.Size or not config.Range then
+		return {}
+	end
+	
+	local params = OverlapParams.new()
+	params.FilterDescendantsInstances = {character}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	
+	local hitBoxCFrame = root.CFrame * CFrame.new(0, 0, -config.Range)
+	local parts = workspace:GetPartBoundsInBox(hitBoxCFrame, config.Size, params)
+	
+	local targets = {}
+	
+	for _, part in ipairs(parts) do
+		local model = part:FindFirstAncestorOfClass("Model")
+		if model and model ~= character then
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 and not targets[model] then
+				targets[model] = humanoid
+			end
+		end
+	end
+	return targets
+end
+
+local function RadiusHit(character, root, config)
+	
+	if not config.Range then
+		return {}
+	end
+	
+	local params = OverlapParams.new()
+	params.FilterDescendantsInstances = {character}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	
+	local parts = workspace:GetPartBoundsInRadius(root.Position, config.Range, params)
+	
+	local targets = {}
+	
+	for _, part in ipairs(parts) do
+		local model = part:FindFirstAncestorOfClass("Model")
+		if model and model ~= character then
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 and not targets[model] then
+				targets[model] = humanoid
+			end
+		end
+	end
+	return targets
+end
+
+local function RaycastHit(character, root, config)
+	
+	if not config.Range then
+		return {}
+	end
+	
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {character}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	
+	local direction = root.CFrame.LookVector * config.Range
+	local result = workspace:Raycast(root.Position, direction, params)
+	
+	local targets = {}
+	
+	if result then
+		local model = result.Instance:FindFirstAncestorOfClass("Model")
+		if model and model ~= character then
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 then
+				targets[model] = humanoid
+			end
+		end
+		
+	end
+	
+	return targets
+end
+
+function HitboxModule:CreateHitbox(attacker, config)
+	
+	if not config or not config.Type then
+		return {}
+	end
+	
+	local character = GetCharacterModel(attacker)
+	if not character then return {} end
+	
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then return {} end
+
+if config.Type == "Box" then
+		return BoxHit(character, root, config)
+	elseif config.Type == "Radius" then
+		return RadiusHit(character, root, config)
+	elseif config.Type == "Raycast" then
+		return RaycastHit(character, root, config)
+	end
+	return {}
+end	
+
+return HitboxModule
