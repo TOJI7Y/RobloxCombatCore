@@ -1,0 +1,423 @@
+local CharacterConfig = {}
+
+CharacterConfig.Gojo = {
+
+	SlotOrder = { "BluePull", "RedRepel", "HollowPurple", "UnlimitedVoid" },
+	DisplayName = "Gojo Satoru",
+	ShopItemKey = "gojo",
+	CursedEnergy = {
+		Max        = 200,
+		Regen      = 6,  
+		RegenDelay = 3,    
+	},
+	Passive = {
+		Name           = "Infinity",
+		BlockThreshold = 15,
+		DrainPerBlock  = 8,
+	},
+	Moves = {
+
+        BluePull = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 18,
+			CECost       = 20,
+			Cooldown     = 4,
+			StartupTime  = 0.2,  
+			ActiveTime   = 0.3,  
+			RecoveryTime = 0.4,   
+			Hitbox = {
+				Type  = "Radius", 
+				Range = 12,       
+			},
+			StunDuration      = 0.6,
+			Knockback         = 0,   
+			KnockbackDuration = 0,
+			Physics = {
+				Type     = "Pull",
+				Force    = 80,
+				Duration = 0.3,
+			},
+		},
+
+		RedRepel = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 22,
+			CECost       = 25,
+			Cooldown     = 5,
+			StartupTime  = 0.15,
+			ActiveTime   = 0.2,
+			RecoveryTime = 0.5,
+			Hitbox = {
+				Type  = "Radius",
+				Range = 10,
+			},
+			StunDuration      = 0.8,
+			Knockback         = 120,
+			KnockbackDuration = 0.3,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 120,
+				Duration = 0.3,
+			},
+		},
+
+		HollowPurple = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 65,
+			CECost       = 60,
+			Cooldown     = 18,
+			StartupTime  = 1.2,   
+			ActiveTime   = 0.5,
+			RecoveryTime = 1.0,
+			Hitbox = {
+				Type  = "Radius",
+				Range = 30,       
+			},
+			StunDuration      = 2.0,
+			Knockback         = 200,
+			KnockbackDuration = 0.5,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 200,
+				Duration = 0.5,
+			},
+		},
+
+		UnlimitedVoid = {
+			AnimationId  = "rbxassetid://0",
+			CECost       = 150,
+			Cooldown     = 60,
+			StartupTime  = 2.0,
+			RecoveryTime = 2.0,
+			IsDomain     = true,  
+			Domain = {
+				Duration     = 10,   
+				Radius       = 35,  
+				TickDamage   = 5,    
+				TickInterval = 1,    
+				StunDuration = 0.9,  
+			},
+		},
+	},
+}
+
+CharacterConfig.Sukuna = {
+
+	SlotOrder = { "DisembowelSlash", "CleaveSlash", "FlameArrow", "MalevolentShrine" },
+	DisplayName = "Ryomen Sukuna",
+	ShopItemKey = "sukuna",
+
+	CursedEnergy = {
+		Max        = 180,
+		Regen      = 4,
+		RegenDelay = 2,
+	},
+
+	Passive = {
+		Name       = "MalevolentGrace",
+		CritChance = 0.20,  
+		CritMult   = 1.75,  
+	},
+
+	Moves = {
+
+		DisembowelSlash = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 28,
+			CECost       = 15,
+			Cooldown     = 3,
+			StartupTime  = 0.15,
+			ActiveTime   = 0.2,
+			RecoveryTime = 0.35,
+			Hitbox = {
+				Type  = "Box",
+				Size  = Vector3.new(6, 5, 3),
+				Range = 7,
+			},
+			StunDuration      = 0.4,
+			Knockback         = 40,
+			KnockbackDuration = 0.2,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 40,
+				Duration = 0.2,
+			},
+		},
+
+		CleaveSlash = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 45,
+			CECost       = 30,
+			Cooldown     = 7,
+			StartupTime  = 0.3,
+			ActiveTime   = 0.25,
+			RecoveryTime = 0.5,
+			Hitbox = {
+				Type  = "Box",
+				Size  = Vector3.new(10, 6, 3),
+				Range = 9,
+			},
+			StunDuration      = 1.0,
+			Knockback         = 70,
+			KnockbackDuration = 0.25,
+			ScalesWithHP      = true,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 70,
+				Duration = 0.25,
+			},
+		},
+
+		FlameArrow = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 38,
+			CECost       = 40,
+			Cooldown     = 10,
+			StartupTime  = 0.5,
+			ActiveTime   = 0.6,
+			RecoveryTime = 0.6,
+			Hitbox = {
+				Type  = "Raycast",
+				Range = 40,        
+			},
+			StunDuration      = 0.5,
+			Knockback         = 50,
+			KnockbackDuration = 0.2,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 50,
+				Duration = 0.2,
+			},
+		},
+
+		MalevolentShrine = {
+			AnimationId  = "rbxassetid://0",
+			CECost       = 140,
+			Cooldown     = 60,
+			StartupTime  = 1.8,
+			RecoveryTime = 1.5,
+			IsDomain     = true,
+			Domain = {
+				Duration     = 12,
+				Radius       = 35,
+				TickDamage   = 8,
+				TickInterval = 0.5, 
+				StunDuration = 0.2,
+			},
+		},
+	},
+}
+
+CharacterConfig.Megumi = {
+
+	SlotOrder = { "DivergingShadow", "SummonNue", "SummonToad", "ChimeraShadowGarden" },
+	DisplayName = "Fushiguro Megumi",
+	ShopItemKey = "megumi",
+
+	CursedEnergy = {
+		Max        = 160,
+		Regen      = 5,
+		RegenDelay = 2.5,
+	},
+
+	Passive = {
+		Name                = "ShadowVeil",
+		InvisibleDuration   = 1.2,  
+		Cooldown            = 8,    
+	},
+
+	Moves = {
+
+		DivergingShadow = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 20,
+			CECost       = 18,
+			Cooldown     = 4,
+			StartupTime  = 0.25,
+			ActiveTime   = 0.3,
+			RecoveryTime = 0.4,
+			Hitbox = {
+				Type  = "Box",
+				Size  = Vector3.new(5, 5, 4),
+				Range = 8,
+			},
+			StunDuration      = 0.5,
+			Knockback         = 35,
+			KnockbackDuration = 0.2,
+			Physics = {
+				Type     = "Knockback",
+				Force    = 35,
+				Duration = 0.2,
+			},
+		},
+
+		SummonNue = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 30,
+			CECost       = 35,
+			Cooldown     = 8,
+			StartupTime  = 0.6,
+			ActiveTime   = 1.0,
+			RecoveryTime = 0.5,
+			Hitbox = {
+				Type  = "Raycast",
+				Range = 25,
+			},
+			StunDuration      = 0.8,
+			Knockback         = 60,
+			KnockbackDuration = 0.3,
+			IsShikigami       = true, 
+			Physics = {
+				Type     = "Knockback",
+				Force    = 60,
+				Duration = 0.3,
+			},
+		},
+
+		SummonToad = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 15,
+			CECost       = 40,
+			Cooldown     = 12,
+			StartupTime  = 0.8,
+			ActiveTime   = 2.0,
+			RecoveryTime = 0.6,
+			Hitbox = {
+				Type  = "Radius",
+				Range = 6,
+			},
+			StunDuration      = 2.5, 
+			Knockback         = 0,
+			KnockbackDuration = 0,
+			IsShikigami       = true,
+			GrabTarget        = true,
+			Physics = {
+				Type     = "Pull",
+				Force    = 40,
+				Duration = 0.3,
+			},
+		},
+
+		ChimeraShadowGarden = {
+			AnimationId  = "rbxassetid://0",
+			CECost       = 130,
+			Cooldown     = 60,
+			StartupTime  = 1.5,
+			RecoveryTime = 1.5,
+			IsDomain     = true,
+			Domain = {
+				Duration     = 10,
+				Radius       = 30,
+				TickDamage   = 4,
+				TickInterval = 0.8,
+				StunDuration = 0.3,
+				SlowAmount   = 0.5,  
+			},
+		},
+	},
+}
+
+CharacterConfig.Yuji = {
+
+	SlotOrder = { "OneTwo", "ShrineKick", "BlackFlashActivate", "SukunaTakeover" },
+	DisplayName = "Itadori Yuji",
+	ShopItemKey = "yuji",
+
+	CursedEnergy = {
+		Max        = 150,
+		Regen      = 3,
+		RegenDelay = 4,
+	},
+
+	Passive = {
+		Name              = "DivergentFist",
+		DelayedBurstDelay = 0.15,  
+		DelayedBurstMult  = 0.6,  
+		BlackFlashChance  = 1,  
+		BlackFlashMult    = 2.5,  
+		CEGainOnHit       = 5,     
+	},
+
+	Moves = {
+
+		OneTwo = {
+			AnimationId  = "rbxassetid://507777826",
+			Damage       = 16,
+			CECost       = 10,
+			Cooldown     = 2,
+			StartupTime  = 0.1,
+			ActiveTime   = 0.15,
+			RecoveryTime = 0.25,
+			Hitbox = {
+				Type  = "Box",
+				Size  = Vector3.new(4, 4, 4),
+				Range = 5,
+			},
+			StunDuration      = 0.3,
+			Knockback         = 30,
+			KnockbackDuration = 0.15,
+			ComboCount        = 2, 
+			Physics = {
+				Type     = "Knockback",
+				Force    = 30,
+				Duration = 0.15,
+			},
+		},
+
+		ShrineKick = {
+			AnimationId  = "rbxassetid://507777268",
+			Damage       = 32,
+			CECost       = 22,
+			Cooldown     = 5,
+			StartupTime  = 0.2,
+			ActiveTime   = 0.2,
+			RecoveryTime = 0.45,
+			Hitbox = {
+				Type  = "Box",
+				Size  = Vector3.new(5, 5, 3),
+				Range = 6,
+			},
+			StunDuration      = 0.7,
+			Knockback         = 80,
+			KnockbackDuration = 0.3,
+			Physics = {
+				Type     = "Launch", 
+				Force    = 80,
+				Duration = 0.3,
+			},
+		},
+
+		BlackFlashActivate = {
+			AnimationId  = "rbxassetid://0",
+			Damage       = 0,     
+			CECost       = 50,
+			Cooldown     = 14,
+			StartupTime  = 0.3,
+			ActiveTime   = 0.0,
+			RecoveryTime = 0.3,
+			Hitbox       = nil,   
+			BuffState    = "BlackFlashReady",
+			BuffDuration = 3.0,  
+			DamageMult   = 2.5,
+		},
+
+		SukunaTakeover = {
+			AnimationId  = "rbxassetid://0",
+			CECost       = 120,
+			Cooldown     = 60,
+			StartupTime  = 1.0,
+			RecoveryTime = 2.0,
+			IsDomain     = true,
+			Domain = {
+				Duration      = 8,
+				Radius        = 28,
+				TickDamage    = 6,
+				TickInterval  = 0.6,
+				StunDuration  = 0.3,
+				BorrowedMoves = { "DisembowelSlash", "CleaveSlash" },
+			},
+		},
+	},
+}
+
+return CharacterConfig
