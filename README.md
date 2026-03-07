@@ -42,6 +42,7 @@ The system is fully **data-driven**, allowing new characters and
 abilities to be added through configuration tables without modifying  
 the core combat logic.
 
+```
 ServerScriptService/
 ├── Combat/
 │   ├── CombatService
@@ -68,5 +69,4 @@ ReplicatedStorage/
     └── ItemConfig
 
 StarterPlayerScripts/
-├── AbilityController
-└── CombatUI
+```
