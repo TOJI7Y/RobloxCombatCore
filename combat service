@@ -1,38 +1,45 @@
-local CombatService = {}
+-- this is a JJK-based combat system, completely scalable and module-architect 
 
+
+
+
+local CombatService = {}
+--core Services 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local CombatStateManager = require(script.Parent.CombatStateManager)
-local PhysicsModule = require(script.Parent.PhysicsModule)
-local HitboxModule = require(script.Parent.HitboxModule)
-local CursedEnergyService = require(script.Parent.CursedEnergyService)
-local MoveRegistry = require(script.Parent.MoveRegistry)
-local PassiveService = require(script.Parent.PassiveService)
-local DomainService = require(script.Parent.DomainService)
+--System Modules 
+each module does a different function to keep it clean 
+local CombatStateManager = require(script.Parent.CombatStateManager) -- for players state like (stun, recovery etc)
+local PhysicsModule = require(script.Parent.PhysicsModule) -- for physics like knockback 
+local HitboxModule = require(script.Parent.HitboxModule)   -- for hitbox 
+local CursedEnergyService = require(script.Parent.CursedEnergyService)  -- for curse energy so player doesn't keep spamming moves
+local MoveRegistry = require(script.Parent.MoveRegistry)  -- stores move defination of every character 
+local PassiveService = require(script.Parent.PassiveService)  -- handles passives 
+local DomainService = require(script.Parent.DomainService)  -- handles domain 
 
-local Logger = require(ServerScriptService.Services.Logger)
+local Logger = require(ServerScriptService.Services.Logger)  -- logging system 
 
-local StateSync = ReplicatedStorage.Remotes:WaitForChild("StateSync")
+local StateSync = ReplicatedStorage.Remotes:WaitForChild("StateSync")  --Remote used to sync combat events to clients
 
-local cooldown = {}
+local cooldown = {}  -- for players cooldown 
 
-local function getCooldown(player)
+local function getCooldown(player)  -- returns cooldown table or creates if doesn't have 
 	cooldown[player] = cooldown[player] or {}
 	return cooldown[player]
 end
 
-local HitLog = {}
+local HitLog = {}  -- multiple dmg from on hit 
 
-local function getRootPart(player)
+local function getRootPart(player)  -- to get hrp 
 	local character = player.Character
 	if not character then return nil end
 	
 	return character:FindFirstChild("HumanoidRootPart")
 end
 
-local function getHumanoid(player)
+local function getHumanoid(player) -- to get humanoid 
 	local character = player.Character
 	if not character then return nil end
 	
@@ -41,7 +48,7 @@ end
 
 local CharacterService 
 
-local function getMoveData(player, moveName)
+local function getMoveData(player, moveName) -- get's players move 
 	if not CharacterService then 
 		CharacterService = require(script.Parent.CharacterService)
 	end
@@ -67,7 +74,7 @@ local function getMoveData(player, moveName)
 	return move
 end
 
-local AbilityService
+local AbilityService 
 local function getAbilityService()
 	if not AbilityService then
 		AbilityService = require(script.Parent.AbilityService)
@@ -75,13 +82,14 @@ local function getAbilityService()
 	return AbilityService
 end
 	
-function CombatService:CanUseMove(player, moveName)
+function CombatService:CanUseMove(player, moveName) -- checks where player can use move or not 
 	
 	local move = getMoveData(player, moveName)
 	if not move then 
 		return false, "Invalid move"
 	end
-	
+
+	-- these are all states currently in system stored by CombatStateManager
 	if CombatStateManager:HasState(player, "Stunned") then
 		Logger:Warn("[CombatService] Blocked: Stunned >> " .. moveName, player)
 		return false, "Stunned"
@@ -103,7 +111,7 @@ function CombatService:CanUseMove(player, moveName)
 		return false, "On Cooldown"
 	end
 	
-	local CeCost = move.CECost or 0
+	local CeCost = move.CECost or 0  --checks for CE for move 
 	if CeCost > 0 and not CursedEnergyService:HasCE(player, CeCost) then
 		Logger:Warn("[CombatService] Blocked: Not Enough CE >> " .. moveName, player)
 		return false, "Not Enough Cursed Energy"
@@ -118,9 +126,9 @@ function CombatService:CanUseMove(player, moveName)
 	return true, "OK"
 end
 
-function CombatService:ApplyHit(attacker, victim, move, hitboxId)
+function CombatService:ApplyHit(attacker, victim, move, hitboxId) -- applies dmg and effect to player 
 	
-	HitLog[hitboxId] = HitLog[hitboxId] or {}
+	HitLog[hitboxId] = HitLog[hitboxId] or {}  -- same to prevent double dmg 
 	if HitLog[hitboxId][victim] then
 		Logger:Warn("[CombatService] Double hit prevented >> " .. victim.Name, attacker)
 		return
@@ -178,7 +186,7 @@ function CombatService:ApplyHit(attacker, victim, move, hitboxId)
 	})
 end
 
-function CombatService:UseMove(player, moveName)
+function CombatService:UseMove(player, moveName)  main point to validate a move and hit ditection and cd 
 	
 	local allowed, reason = self:CanUseMove(player, moveName)
 	if not allowed then
@@ -259,7 +267,7 @@ function CombatService:UseMove(player, moveName)
 		for _ in pairs(victims) do victimCount += 1 end
 		Logger:Info("[CombatService] Hitbox fired >> " .. moveName .. " | " .. victimCount .. " victims", player)
 
-		for victimModel, _ in pairs(victims) do
+		for victimModel, _ in pairs(victims) do -- to prevent hit on npcs
 			local victimPlayer = Players:GetPlayerFromCharacter(victimModel)
 			if victimPlayer then
 				self:ApplyHit(player, victimPlayer, move, hitboxId)
@@ -276,7 +284,7 @@ function CombatService:UseMove(player, moveName)
 			task.wait(move.ActiveTime)
 		end
 		
-		if move.RecoveryTime and move.RecoveryTime > 0 then
+		if move.RecoveryTime and move.RecoveryTime > 0 then -- recovery system 
 			
 			CombatStateManager:AddState(player, "Recovery", move.RecoveryTime)
 			Logger:Info("[CombatService] Recovery >> " .. move.RecoveryTime .. "s", player)
@@ -298,9 +306,11 @@ function CombatService:UseMove(player, moveName)
 	end)
 end
 
-Players.PlayerRemoving:Connect(function(player)
+Players.PlayerRemoving:Connect(function(player) -- and lastly player clean up 
 	cooldown[player] = nil
 	Logger:Info("[CombatService] Cleaned up player data", player)
 end)
 
 return CombatService
+
+
